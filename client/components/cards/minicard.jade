@@ -74,6 +74,11 @@ template(name="minicard")
         each getMembers
           +userAvatar(userId=this)
 
+    if getAssignees
+      .minicard-assignees.js-minicard-assignees
+        each getAssignees
+          +userAvatar(userId=this)
+
     .badges
       unless currentUser.isNoComments
         if comments.count
