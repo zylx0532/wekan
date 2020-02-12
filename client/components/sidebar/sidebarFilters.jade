@@ -5,6 +5,10 @@
 
 template(name="filterSidebar")
   ul.sidebar-list
+    span {{_ 'list-filter-label'}}
+    form.js-list-filter
+      input(type="text")
+  ul.sidebar-list
     li(class="{{#if Filter.labelIds.isSelected undefined}}active{{/if}}")
           a.name.js-toggle-label-filter
             span.sidebar-list-item-description
@@ -113,13 +117,14 @@ template(name="multiselectionSidebar")
               i.fa.fa-check
             else if someSelectedElementHave 'member' _id
               i.fa.fa-ellipsis-h
-  hr
-  a.sidebar-btn.js-move-selection
-    i.fa.fa-share
-    span {{_ 'move-selection'}}
-  a.sidebar-btn.js-archive-selection
-    i.fa.fa-archive
-    span {{_ 'archive-selection'}}
+  unless currentUser.isWorker
+    hr
+    a.sidebar-btn.js-move-selection
+      i.fa.fa-share
+      span {{_ 'move-selection'}}
+    a.sidebar-btn.js-archive-selection
+      i.fa.fa-archive
+      span {{_ 'archive-selection'}}
 
 template(name="disambiguateMultiLabelPopup")
   p {{_ 'what-to-do'}}

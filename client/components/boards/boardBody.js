@@ -1,3 +1,5 @@
+import { Cookies } from 'meteor/ostrio:cookies';
+const cookies = new Cookies();
 const subManager = new SubsManager();
 const { calculateIndex, enableClickOnTouch } = Utils;
 const swimlaneWhileSortingHeight = 150;
@@ -89,7 +91,6 @@ BlazeComponent.extendComponent({
         helper.append(list.clone());
         return helper;
       },
-      handle: '.js-swimlane-header',
       items: '.swimlane:not(.placeholder)',
       placeholder: 'swimlane placeholder',
       distance: 7,
@@ -193,6 +194,32 @@ BlazeComponent.extendComponent({
     // ugly touch event hotfix
     enableClickOnTouch('.js-swimlane:not(.placeholder)');
 
+    this.autorun(() => {
+      let showDesktopDragHandles = false;
+      currentUser = Meteor.user();
+      if (currentUser) {
+        showDesktopDragHandles = (currentUser.profile || {})
+          .showDesktopDragHandles;
+      } else if (cookies.has('showDesktopDragHandles')) {
+        showDesktopDragHandles = true;
+      } else {
+        showDesktopDragHandles = false;
+      }
+      if (!Utils.isMiniScreen() && showDesktopDragHandles) {
+        $swimlanesDom.sortable({
+          handle: '.js-swimlane-header-handle',
+        });
+      } else if (!Utils.isMiniScreen() && !showDesktopDragHandles) {
+        $swimlanesDom.sortable({
+          handle: '.swimlane-header',
+        });
+      }
+
+      // Disable drag-dropping if the current user is not a board member or is miniscreen
+      $swimlanesDom.sortable('option', 'disabled', !userIsMember());
+      $swimlanesDom.sortable('option', 'disabled', Utils.isMiniScreen());
+    });
+
     function userIsMember() {
       return (
         Meteor.user() &&
@@ -210,21 +237,30 @@ BlazeComponent.extendComponent({
   },
 
   isViewSwimlanes() {
-    const currentUser = Meteor.user();
-    if (!currentUser) return false;
-    return (currentUser.profile || {}).boardView === 'board-view-swimlanes';
+    currentUser = Meteor.user();
+    if (currentUser) {
+      return (currentUser.profile || {}).boardView === 'board-view-swimlanes';
+    } else {
+      return cookies.get('boardView') === 'board-view-swimlanes';
+    }
   },
 
   isViewLists() {
-    const currentUser = Meteor.user();
-    if (!currentUser) return true;
-    return (currentUser.profile || {}).boardView === 'board-view-lists';
+    currentUser = Meteor.user();
+    if (currentUser) {
+      return (currentUser.profile || {}).boardView === 'board-view-lists';
+    } else {
+      return cookies.get('boardView') === 'board-view-lists';
+    }
   },
 
   isViewCalendar() {
-    const currentUser = Meteor.user();
-    if (!currentUser) return false;
-    return (currentUser.profile || {}).boardView === 'board-view-cal';
+    currentUser = Meteor.user();
+    if (currentUser) {
+      return (currentUser.profile || {}).boardView === 'board-view-cal';
+    } else {
+      return cookies.get('boardView') === 'board-view-cal';
+    }
   },
 
   openNewListForm() {
@@ -309,26 +345,46 @@ BlazeComponent.extendComponent({
       events(start, end, timezone, callback) {
         const currentBoard = Boards.findOne(Session.get('currentBoard'));
         const events = [];
+        const pushEvent = function(card, title, start, end, extraCls) {
+          start = start || card.startAt;
+          end = end || card.endAt;
+          title = title || card.title;
+          const className =
+            (extraCls ? `${extraCls} ` : '') +
+            (card.color ? `calendar-event-${card.color}` : '');
+          events.push({
+            id: card._id,
+            title,
+            start,
+            end: end || card.endAt,
+            allDay:
+              Math.abs(end.getTime() - start.getTime()) / 1000 === 24 * 3600,
+            url: FlowRouter.url('card', {
+              boardId: currentBoard._id,
+              slug: currentBoard.slug,
+              cardId: card._id,
+            }),
+            className,
+          });
+        };
         currentBoard
           .cardsInInterval(start.toDate(), end.toDate())
           .forEach(function(card) {
-            events.push({
-              id: card._id,
-              title: card.title,
-              start: card.startAt,
-              end: card.endAt,
-              allDay:
-                Math.abs(card.endAt.getTime() - card.startAt.getTime()) /
-                  1000 ===
-                24 * 3600,
-              url: FlowRouter.url('card', {
-                boardId: currentBoard._id,
-                slug: currentBoard.slug,
-                cardId: card._id,
-              }),
-              className: card.color ? `calendar-event-${card.color}` : null,
-            });
+            pushEvent(card);
           });
+        currentBoard
+          .cardsDueInBetween(start.toDate(), end.toDate())
+          .forEach(function(card) {
+            pushEvent(
+              card,
+              `${card.title} ${TAPi18n.__('card-due')}`,
+              card.dueAt,
+              new Date(card.dueAt.getTime() + 36e5),
+            );
+          });
+        events.sort(function(first, second) {
+          return first.id > second.id ? 1 : -1;
+        });
         callback(events);
       },
       eventResize(event, delta, revertFunc) {
@@ -361,8 +417,11 @@ BlazeComponent.extendComponent({
     };
   },
   isViewCalendar() {
-    const currentUser = Meteor.user();
-    if (!currentUser) return false;
-    return (currentUser.profile || {}).boardView === 'board-view-cal';
+    currentUser = Meteor.user();
+    if (currentUser) {
+      return (currentUser.profile || {}).boardView === 'board-view-cal';
+    } else {
+      return cookies.get('boardView') === 'board-view-cal';
+    }
   },
 }).register('calendarView');

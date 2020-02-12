@@ -1,3 +1,5 @@
+import { Cookies } from 'meteor/ostrio:cookies';
+const cookies = new Cookies();
 const { calculateIndexData } = Utils;
 
 let swimlaneColors;
@@ -27,6 +29,19 @@ BlazeComponent.extendComponent({
     ];
   },
 }).register('swimlaneHeader');
+
+Template.swimlaneHeader.helpers({
+  showDesktopDragHandles() {
+    currentUser = Meteor.user();
+    if (currentUser) {
+      return (currentUser.profile || {}).showDesktopDragHandles;
+    } else if (cookies.has('showDesktopDragHandles')) {
+      return true;
+    } else {
+      return false;
+    }
+  },
+});
 
 Template.swimlaneActionPopup.events({
   'click .js-set-swimlane-color': Popup.open('setSwimlaneColor'),

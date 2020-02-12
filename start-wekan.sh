@@ -39,7 +39,7 @@
       #---------------------------------------------------------------
       # ==== RICH TEXT EDITOR IN CARD COMMENTS ====
       # https://github.com/wekan/wekan/pull/2560
-      export RICHER_CARD_COMMENT_EDITOR=true
+      export RICHER_CARD_COMMENT_EDITOR=false
       #---------------------------------------------------------------
       # ==== CARD OPENED, SEND WEBHOOK MESSAGE ====
       export CARD_OPENED_WEBHOOK_ENABLED=false
@@ -71,8 +71,9 @@
       # dueat startat endat receivedat, also notification to
       # the watchers and if any card is due, about due or past due.
       #
-      # Notify due days, default 2 days before and after. 0 = due notifications disabled. Default: 2
-      #export NOTIFY_DUE_DAYS_BEFORE_AND_AFTER=2
+      # Notify due days, default is None.
+      #export NOTIFY_DUE_DAYS_BEFORE_AND_AFTER=2,0
+      # it will notify user 2 days before due day and on the due day
       #
       # Notify due at hour of day. Default every morning at 8am. Can be 0-23.
       # If env variable has parsing error, use default. Notification sent to watchers.

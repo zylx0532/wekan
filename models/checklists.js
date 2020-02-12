@@ -276,14 +276,22 @@ if (Meteor.isServer) {
    * @param {string} boardId the board ID
    * @param {string} cardId the card ID
    * @param {string} title the title of the new checklist
+   * @param {string} [items] the list of items on the new checklist
    * @return_type {_id: string}
    */
   JsonRoutes.add(
     'POST',
     '/api/boards/:boardId/cards/:cardId/checklists',
     function(req, res) {
-      Authentication.checkUserId(req.userId);
-
+      // Check user is logged in
+      Authentication.checkLoggedIn(req.userId);
+      const paramBoardId = req.params.boardId;
+      // Check user has permission to add checklist to the card
+      const board = Boards.findOne({
+        _id: paramBoardId,
+      });
+      const addPermission = allowIsBoardMemberCommentOnly(req.userId, board);
+      Authentication.checkAdminOrCondition(req.userId, addPermission);
       const paramCardId = req.params.cardId;
       const id = Checklists.insert({
         title: req.body.title,
@@ -291,11 +299,19 @@ if (Meteor.isServer) {
         sort: 0,
       });
       if (id) {
-        req.body.items.forEach(function(item, idx) {
+        let items = req.body.items || [];
+        if (_.isString(items)) {
+          if (items === '') {
+            items = [];
+          } else {
+            items = [items];
+          }
+        }
+        items.forEach(function(item, idx) {
           ChecklistItems.insert({
             cardId: paramCardId,
             checklistId: id,
-            title: item.title,
+            title: item,
             sort: idx,
           });
         });
